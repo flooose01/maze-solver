@@ -155,6 +155,7 @@ class AnimationWindow(tk.Tk):
         self.start_button.pack()
 
         #def stop_animation():
+        #test
 
         # Stop button
         self.stop_button = tk.Button(self.right_frame, text="stop", pady=10, padx=20)
