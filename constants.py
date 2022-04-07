@@ -1,0 +1,4 @@
+WALL = "w"
+CELL = "c"
+VISITED = "v"
+STATE_TO_COLOR = {WALL:(0,0,0), CELL:(255,255,255), VISITED:(0,0,255)}
