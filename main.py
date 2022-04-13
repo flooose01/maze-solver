@@ -1,11 +1,9 @@
+from asyncio.windows_events import NULL
 import tkinter as tk
-from tracemalloc import start
 import numpy as np
 from PIL import Image, ImageTk
-from pyparsing import White
-from maze import Maze
+from maze import Maze, TYPES
 from constants import WALL, CELL, VISITED, STATE_TO_COLOR
-from maze import TYPES
 
 class AnimationScreen(tk.Canvas):
     def __init__(self, master, **kwargs):
@@ -16,6 +14,7 @@ class AnimationScreen(tk.Canvas):
             size=(self.canvas_width, self.canvas_height)))
         self.image_canvas = self.create_image(0,0,anchor=tk.NW,
             image=self.blank_img)
+        self.is_animate = False
 
     def update_screen(self, maze_type, maze_width, maze_height):
         self.maze_manager = Maze(maze_type, maze_width, maze_height)
@@ -41,19 +40,26 @@ class AnimationScreen(tk.Canvas):
         self.gen_img()
         self.itemconfig(self.image_canvas, image=self.img)
 
-    def animate(self):
-        self.animation_state.is_animate = True
+    def start_animate(self):
+        self.is_animate = True
         self.next_frame()
 
     def next_frame(self):
-        if self.animation_state.is_animate:
+        if self.is_animate and not self.animation_state.is_finish:
             self.animation_state.dfs()
-            print(self.animation_state.master_maze)
             self.update_img()
             self.after(250, self.next_frame)
+            self.check_finish()
+
+    def check_finish(self):
+        if self.animation_state.is_finish:
+            self.is_animate = False
+
+    def stop_animate(self):
+        self.is_animate = False
 
     def reset(self):
-        self.animation_state = AnimationState(self.maze_manager)
+        self.animation_state.reset()
 
 class AnimationState():
     def __init__(self, maze_manager):
@@ -64,15 +70,11 @@ class AnimationState():
         self.height = maze_manager.maze.height
         self.width = maze_manager.maze.width
 
-        self.is_animate = False
-
+        self.is_finish = False
         self.curr_pos = (1,1)
         self.visited = [(1,1)]
         self.st = [(1,1)]
         self.end_pos = (self.height - 1, self.width - 2)
-
-    def get_curr_maze(self):
-        return self.curr_maze
 
     def dfs(self):
         pos = self.st.pop(len(self.st) - 1)
@@ -82,7 +84,7 @@ class AnimationState():
 
         if pos == self.end_pos:
             self.st.clear()
-            self.is_animate = False
+            self.is_finish = True
 
         else:
             # Find neighbors
@@ -107,6 +109,9 @@ class AnimationState():
 class AnimationWindow(tk.Tk):
     def __init__(self):
         super().__init__()
+
+        # Constants
+        self.DEFAULT_SIZE = (10, 10)
 
         # Header
         self.title("Maze Solver")
@@ -134,14 +139,14 @@ class AnimationWindow(tk.Tk):
         # Size selection
         tk.Label(self.right_frame, text="Width", bd=5, font=("Arial", 15),
             width=10, padx=2, pady=10).pack()
-        self.maze_width = tk.IntVar(self, 5)
+        self.maze_width = tk.IntVar(self, self.DEFAULT_SIZE[0])
         self.maze_width_entry = tk.Entry(self.right_frame, textvariable=self.maze_width,
             font=("Arial", 12), bd=5)
         self.maze_width_entry.pack()
 
         tk.Label(self.right_frame, text="Height", bd=5, font=("Arial", 15),
             width=10, padx=2, pady=10).pack()
-        self.maze_height = tk.IntVar(self, 5)
+        self.maze_height = tk.IntVar(self, self.DEFAULT_SIZE[1])
         self.maze_height_entry = tk.Entry(self.right_frame, textvariable=self.maze_height,
             font=("Arial", 12), bd=5)
         self.maze_height_entry.pack()
@@ -155,8 +160,8 @@ class AnimationWindow(tk.Tk):
                 mw = self.maze_width.get()
                 mh = self.maze_height.get()
             except:
-                mw = 5
-                mh = 5
+                mw = self.DEFAULT_SIZE[0]
+                mh = self.DEFAULT_SIZE[1]
 
             self.animation_screen.update_screen(maze_type=self.maze_type.get(),
                 maze_width=mw, maze_height=mh)
@@ -166,20 +171,30 @@ class AnimationWindow(tk.Tk):
             command=generate_maze)
         self.gen_button.pack()
 
-        def start_animation():
-            self.animation_screen.animate()
+        def start_animate():
+            self.animation_screen.start_animate()
             #disable start button
 
         # Start button
         self.start_button = tk.Button(self.right_frame, text="start", pady=10, padx=20,
-            command=start_animation)
+            command=start_animate)
         self.start_button.pack()
 
-        #def stop_animation():
+        def stop_animate():
+            self.animation_screen.stop_animate()
 
         # Stop button
-        self.stop_button = tk.Button(self.right_frame, text="stop", pady=10, padx=20)
+        self.stop_button = tk.Button(self.right_frame, text="stop", pady=10, padx=20,
+            command=stop_animate)
         self.stop_button.pack()
+
+        def reset():
+            self.animation_screen.reset()
+
+        self.reset_button = tk.Button(self.right_frame, text="reset", pady=10, padx=20,
+            command=reset(), default="disabled")
+
+
 
 def main():
     aw = AnimationWindow()
