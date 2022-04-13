@@ -1,43 +1,53 @@
-# TEST DFS BFS ON DIFFERENT MAZES
 import tkinter as tk
 import numpy as np
 from PIL import Image, ImageTk
+from pyparsing import White
 from maze import Maze
 from constants import WALL, CELL, VISITED, STATE_TO_COLOR
 from maze import TYPES
 
 class AnimationScreen(tk.Canvas):
-    def __init__(self, master, maze_type, maze_width, maze_height, **kwargs):
+    def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
-
-        self.maze_manager = Maze(maze_type, maze_width, maze_height)
-        self.animation_state = AnimationState(self.maze_manager)
-        #self.maze = self.animation_state.init_maze
-
         self.canvas_width = kwargs["width"]
         self.canvas_height = kwargs["height"]
-        self.maze_scale = int(min(self.canvas_height/maze_height, self.canvas_width/maze_width))
-        self.gen_img()
-        self.image_canvas = self.create_image(0,0,anchor=tk.NW, image=self.img)
+        self.blank_img = ImageTk.PhotoImage(Image.new(mode="RGB",
+            size=(self.canvas_width, self.canvas_height)))
+        self.image_canvas = self.create_image(0,0,anchor=tk.NW,
+            image=self.blank_img)
 
+    def update_screen(self, maze_type, maze_width, maze_height):
+        self.maze_manager = Maze(maze_type, maze_width, maze_height)
+        self.animation_state = AnimationState(self.maze_manager)
+        self.maze_scale = int(min(self.canvas_height/maze_height, self.canvas_width/maze_width))
+        self.update_img()
         self.frame = 0
 
     def gen_img(self):
         maze_arr = self.animation_state.curr_maze
-        arr = np.zeros((len(maze_arr) * self.maze_scale, len(maze_arr[0]) * self.maze_scale, 3), dtype=np.uint8)
+        arr = np.zeros((len(maze_arr) * self.maze_scale, len(maze_arr[0]) * self.maze_scale, 3),
+            dtype=np.uint8)
 
         for row in range(len(maze_arr)):
             for col in range(len(maze_arr[0])):
                 state = STATE_TO_COLOR[maze_arr[row][col]]
                 pixel = np.full((self.maze_scale, self.maze_scale, 3), state)
-                arr[row * self.maze_scale : (row + 1) * self.maze_scale, col * self.maze_scale : (col + 1) * self.maze_scale] = pixel
+                arr[row * self.maze_scale : (row + 1) * self.maze_scale,
+                    col * self.maze_scale : (col + 1) * self.maze_scale] = pixel
 
         self.img = ImageTk.PhotoImage(image = Image.fromarray(arr, 'RGB'))
-
 
     def update_img(self):
         self.gen_img()
         self.itemconfig(self.image_canvas, image=self.img)
+
+    def animate(self):
+        if self.frame < 30:
+            self.frame += 1
+            self.animation_state.dfs()
+            self.after(1000, self.animate)
+        else:
+            self.frame = 0
 
     def reset(self):
         self.animation_state = AnimationState(self.maze_manager)
@@ -118,34 +128,36 @@ class AnimationWindow(tk.Tk):
         # Size selection
         tk.Label(self.right_frame, text="Width", bd=5, font=("Arial", 15),
             width=10, padx=2, pady=10).pack()
-        maze_width = tk.IntVar(self, 5)
-        self.maze_width_entry = tk.Entry(self.right_frame, textvariable=maze_width,
+        self.maze_width = tk.IntVar(self, 5)
+        self.maze_width_entry = tk.Entry(self.right_frame, textvariable=self.maze_width,
             font=("Arial", 12), bd=5)
         self.maze_width_entry.pack()
 
         tk.Label(self.right_frame, text="Height", bd=5, font=("Arial", 15),
             width=10, padx=2, pady=10).pack()
-        maze_height = tk.IntVar(self, 5)
-        self.maze_height_entry = tk.Entry(self.right_frame, textvariable=maze_height,
+        self.maze_height = tk.IntVar(self, 5)
+        self.maze_height_entry = tk.Entry(self.right_frame, textvariable=self.maze_height,
             font=("Arial", 12), bd=5)
         self.maze_height_entry.pack()
 
-        def gen_animation_screen():
-            # Animation screen
+        # Initialize animation screen
+        self.animation_screen = AnimationScreen(self, width=640, height=640)
+        self.animation_screen.pack()
+
+        def generate_maze():
             try:
-                mw = maze_width.get()
-                mh = maze_height.get()
+                mw = self.maze_width.get()
+                mh = self.maze_height.get()
             except:
                 mw = 5
                 mh = 5
 
-            self.animation_screen = AnimationScreen(self, maze_type=self.maze_type.get(),
-                maze_width=mw, maze_height=mh, width = 640, height = 640)
-            self.animation_screen.pack()
+            self.animation_screen.update_screen(maze_type=self.maze_type.get(),
+                maze_width=mw, maze_height=mh)
 
         # Generate button
         self.gen_button = tk.Button(self.right_frame, text="generate maze", pady=10,
-            command=gen_animation_screen)
+            command=generate_maze)
         self.gen_button.pack()
 
         #def start_animation():
@@ -155,7 +167,6 @@ class AnimationWindow(tk.Tk):
         self.start_button.pack()
 
         #def stop_animation():
-        #test
 
         # Stop button
         self.stop_button = tk.Button(self.right_frame, text="stop", pady=10, padx=20)
