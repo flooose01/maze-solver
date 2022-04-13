@@ -1,4 +1,5 @@
 import tkinter as tk
+from tracemalloc import start
 import numpy as np
 from PIL import Image, ImageTk
 from pyparsing import White
@@ -21,7 +22,6 @@ class AnimationScreen(tk.Canvas):
         self.animation_state = AnimationState(self.maze_manager)
         self.maze_scale = int(min(self.canvas_height/maze_height, self.canvas_width/maze_width))
         self.update_img()
-        self.frame = 0
 
     def gen_img(self):
         maze_arr = self.animation_state.curr_maze
@@ -42,12 +42,15 @@ class AnimationScreen(tk.Canvas):
         self.itemconfig(self.image_canvas, image=self.img)
 
     def animate(self):
-        if self.frame < 30:
-            self.frame += 1
+        self.animation_state.is_animate = True
+        self.next_frame()
+
+    def next_frame(self):
+        if self.animation_state.is_animate:
             self.animation_state.dfs()
-            self.after(1000, self.animate)
-        else:
-            self.frame = 0
+            print(self.animation_state.master_maze)
+            self.update_img()
+            self.after(250, self.next_frame)
 
     def reset(self):
         self.animation_state = AnimationState(self.maze_manager)
@@ -60,6 +63,8 @@ class AnimationState():
         self.curr_maze = self.init_maze
         self.height = maze_manager.maze.height
         self.width = maze_manager.maze.width
+
+        self.is_animate = False
 
         self.curr_pos = (1,1)
         self.visited = [(1,1)]
@@ -75,22 +80,23 @@ class AnimationState():
         curr_x = pos[1]
         self.curr_maze[curr_y][curr_x] = VISITED
 
-        # Find neighbors
-        if self.curr_maze[curr_y][curr_x - 1] == self.CELL:
-            self.st.append((curr_x - 1, curr_y))
-
-        if self.curr_maze[curr_y + 1][curr_x] == self.CELL:
-            self.st.append((curr_x, curr_y + 1))
-
-        if self.curr_maze[curr_y][curr_x + 1] == self.CELL:
-            self.st.append((curr_x + 1, curr_y))
-
-        if self.curr_maze[curr_y - 1][curr_x] == self.CELL:
-            self.st.append((curr_x, curr_y - 1))
-
-        if (curr_y, curr_x) == self.end_pos:
+        if pos == self.end_pos:
             self.st.clear()
+            self.is_animate = False
 
+        else:
+            # Find neighbors
+            if self.curr_maze[curr_y][curr_x - 1] == CELL:
+                self.st.append((curr_y, curr_x - 1))
+
+            if self.curr_maze[curr_y + 1][curr_x] == CELL:
+                self.st.append((curr_y + 1, curr_x))
+
+            if self.curr_maze[curr_y][curr_x + 1] == CELL:
+                self.st.append((curr_y, curr_x + 1))
+
+            if self.curr_maze[curr_y - 1][curr_x] == CELL:
+                self.st.append((curr_y - 1, curr_x))
 
     def reset(self):
         self.curr_maze = self.init_maze
@@ -160,10 +166,13 @@ class AnimationWindow(tk.Tk):
             command=generate_maze)
         self.gen_button.pack()
 
-        #def start_animation():
+        def start_animation():
+            self.animation_screen.animate()
+            #disable start button
 
         # Start button
-        self.start_button = tk.Button(self.right_frame, text="start", pady=10, padx=20)
+        self.start_button = tk.Button(self.right_frame, text="start", pady=10, padx=20,
+            command=start_animation)
         self.start_button.pack()
 
         #def stop_animation():
