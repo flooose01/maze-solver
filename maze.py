@@ -173,8 +173,16 @@ class Eller:
                 self.add_row_str(curr_row)
                 self.add_row_arr(curr_row)
 
+class DFS:
+    def __init__(self):
+        self.test = 0
+
 class Prim:
     def __init__(self):
         self.test = 0
 
-TYPES = {"eller" : Eller, "prim" : Prim}
+class Kruskal:
+    def __init__(self):
+        self.test = 0
+
+TYPES = {"eller" : Eller, "dfs": DFS, "prim" : Prim, "kruskal" : Kruskal}

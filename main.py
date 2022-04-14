@@ -1,4 +1,6 @@
+from os import stat
 import tkinter as tk
+from turtle import st
 import numpy as np
 from PIL import Image, ImageTk
 from copy import deepcopy
@@ -25,7 +27,7 @@ class AnimationScreen(tk.Canvas):
         self.maze_scale = int(min(self.canvas_height/maze_height, self.canvas_width/maze_width))
         self.update_img()
 
-    def gen_img(self):
+    def update_img(self):
         maze_arr = self.animation_state.curr_maze
         arr = np.zeros((len(maze_arr) * self.maze_scale, len(maze_arr[0]) * self.maze_scale, 3),
             dtype=np.uint8)
@@ -38,9 +40,6 @@ class AnimationScreen(tk.Canvas):
                     col * self.maze_scale : (col + 1) * self.maze_scale] = pixel
 
         self.img = ImageTk.PhotoImage(image = Image.fromarray(arr, 'RGB'))
-
-    def update_img(self):
-        self.gen_img()
         self.itemconfig(self.image_canvas, image=self.img)
 
     def start_animate(self, animation_speed):
@@ -57,7 +56,7 @@ class AnimationScreen(tk.Canvas):
 
     def check_finish(self):
         if self.animation_state.is_finish:
-            self.is_animate = False
+            self.stop_animate()
 
     def stop_animate(self):
         self.is_animate = False
@@ -68,12 +67,11 @@ class AnimationScreen(tk.Canvas):
 
 class AnimationState():
     def __init__(self, maze_manager):
-        #maze_manager.maze = Eller()
         self.master_maze = maze_manager.maze
-        self.init_maze = maze_manager.maze.get_maze()
+        self.init_maze = self.master_maze.get_maze()
         self.curr_maze = deepcopy(self.init_maze)
-        self.height = maze_manager.maze.height
-        self.width = maze_manager.maze.width
+        self.height = self.master_maze.height
+        self.width = self.master_maze.width
 
         self.is_finish = False
         self.curr_pos = (1,1)
@@ -122,46 +120,55 @@ class AnimationWindow(tk.Tk):
 
         # Header
         self.title("Maze Solver")
-        self.geometry("800x640")
-        self.resizable(False, False)
+        self.geometry("900x640")
 
         # Menu screen
-        self.right_frame = tk.Frame(self, width=160, height=640)
-        self.right_frame.pack(side = tk.LEFT)
-        self.right_frame.pack_propagate(0)
+        self.menu_frame = tk.Frame(self, width=260, height=640)
+        self.menu_frame.pack(side = tk.LEFT)
+        self.menu_frame.pack_propagate(0)
 
         # Type selection
-        lbl1 = tk.Label(self.right_frame, text="Type", font=("Arial", 15),
-            width=10, padx=2, pady=10)
-        lbl1.pack()
+        tk.Label(self.menu_frame, text="Type", font=("Arial", 15),
+            width=10, pady=10, bd=2, relief="solid").pack()
+
+        self.type_frame = tk.Frame(self.menu_frame, width=260, height=150)
+        self.type_frame.pack()
 
         self.maze_type = tk.StringVar(self, list(TYPES.keys())[0])
-        type_buttons = {}
+        self.type_buttons = {}
+        i = -1
         for type in list(TYPES.keys()):
-            button = tk.Radiobutton(self.right_frame, text=type, variable=self.maze_type,
+            i += 1
+            button = tk.Radiobutton(self.type_frame, text=type, variable=self.maze_type,
                     value=type, font=("Arial", 12))
-            button.pack()
-            type_buttons[type] = button
+            button.grid(column=i%3, row=int(i/3))
+            self.type_buttons[type] = button
 
         # Size selection
-        tk.Label(self.right_frame, text="Width", bd=5, font=("Arial", 15),
-            width=10, padx=2, pady=10).pack()
-        self.maze_width = tk.IntVar(self, self.DEFAULT_SIZE[0])
-        self.maze_width_entry = tk.Entry(self.right_frame, textvariable=self.maze_width,
-            font=("Arial", 12), bd=5)
-        self.maze_width_entry.pack()
+        tk.Label(self.menu_frame, text="Size", font=("Arial", 15),
+            width=10, pady=10, bd=2, relief="solid").pack()
 
-        tk.Label(self.right_frame, text="Height", bd=5, font=("Arial", 15),
-            width=10, padx=2, pady=10).pack()
+        self.size_frame = tk.Frame(self.menu_frame, width=260, height=150)
+        self.size_frame.pack()
+
+        tk.Label(self.size_frame, text="Width", font=("Arial", 12),
+            width=10).grid(column=0, row=0)
+        self.maze_width = tk.IntVar(self, self.DEFAULT_SIZE[0])
+        self.maze_width_entry = tk.Entry(self.size_frame, textvariable=self.maze_width,
+            font=("Arial", 10), bd=5, width=4)
+        self.maze_width_entry.grid(column=0, row=1)
+
+        tk.Label(self.size_frame, text="Height", font=("Arial", 12),
+            width=10).grid(column=1, row=0)
         self.maze_height = tk.IntVar(self, self.DEFAULT_SIZE[1])
-        self.maze_height_entry = tk.Entry(self.right_frame, textvariable=self.maze_height,
-            font=("Arial", 12), bd=5)
-        self.maze_height_entry.pack()
+        self.maze_height_entry = tk.Entry(self.size_frame, textvariable=self.maze_height,
+            font=("Arial", 10), bd=5, width=4)
+        self.maze_height_entry.grid(column=1, row=1)
 
         # Speed
-        tk.Label(self.right_frame, text = "Speed", font=("Arial", 15),
-            width=10, padx=2, pady=10).pack()
-        self.speed_slider = tk.Scale(self.right_frame, from_=1, to=len(self.ANIMATION_SPEED),
+        tk.Label(self.menu_frame, text = "Speed", font=("Arial", 15),
+            width=10, pady=10, bd=2, relief="solid").pack()
+        self.speed_slider = tk.Scale(self.menu_frame, from_=1, to=len(self.ANIMATION_SPEED),
             orient='horizontal')
         self.speed_slider.set(3)
         self.speed_slider.pack()
@@ -169,6 +176,13 @@ class AnimationWindow(tk.Tk):
         # Initialize animation screen
         self.animation_screen = AnimationScreen(self, width=640, height=640)
         self.animation_screen.pack()
+
+        # Control
+        tk.Label(self.menu_frame, text="Control", font=("Arial", 15),
+            width=10, pady=10, bd=2, relief="solid").pack()
+
+        self.control_frame = tk.Frame(self.menu_frame, width=260, height=340)
+        self.control_frame.pack()
 
         def generate_maze():
             try:
@@ -184,11 +198,10 @@ class AnimationWindow(tk.Tk):
             self.start_button.configure(state="normal")
             self.reset_button.configure(state="disabled")
 
-
         # Generate button
-        self.gen_button = tk.Button(self.right_frame, text="generate maze", pady=10,
+        self.gen_button = tk.Button(self.control_frame, text="generate maze", pady=10,
             command=generate_maze)
-        self.gen_button.pack()
+        self.gen_button.grid(column=1, row=0, pady=5)
 
         def start_animate():
             self.animation_screen.start_animate(
@@ -197,11 +210,16 @@ class AnimationWindow(tk.Tk):
             self.stop_button.configure(state="normal")
             self.gen_button.configure(state="disabled")
             self.reset_button.configure(state="disabled")
+            self.speed_slider.configure(state="disabled")
+            self.maze_height_entry.configure(state="disabled")
+            self.maze_width_entry.configure(state="disabled")
+            for but in self.type_buttons.values():
+                but.configure(state="disabled")
 
         # Start button
-        self.start_button = tk.Button(self.right_frame, text="start", pady=10, padx=20,
+        self.start_button = tk.Button(self.control_frame, text="start", pady=10, padx=20,
             command=start_animate, state="disabled")
-        self.start_button.pack()
+        self.start_button.grid(column=0, row=1)
 
         def stop_animate():
             self.animation_screen.stop_animate()
@@ -209,20 +227,25 @@ class AnimationWindow(tk.Tk):
             self.stop_button.configure(state="disabled")
             self.gen_button.configure(state="normal")
             self.reset_button.configure(state="normal")
+            self.speed_slider.configure(state="normal")
+            self.maze_height_entry.configure(state="normal")
+            self.maze_width_entry.configure(state="normal")
+            for but in self.type_buttons.values():
+                but.configure(state="normal")
 
         # Stop button
-        self.stop_button = tk.Button(self.right_frame, text="stop", pady=10, padx=20,
+        self.stop_button = tk.Button(self.control_frame, text="stop", pady=10, padx=20,
             command=stop_animate, state="disabled")
-        self.stop_button.pack()
+        self.stop_button.grid(column=1, row=1)
 
         def reset():
             self.animation_screen.reset()
             self.start_button.configure(state="normal")
             self.stop_button.configure(state="disabled")
 
-        self.reset_button = tk.Button(self.right_frame, text="reset", pady=10, padx=20,
+        self.reset_button = tk.Button(self.control_frame, text="reset", pady=10, padx=20,
             command=reset, state="disabled")
-        self.reset_button.pack()
+        self.reset_button.grid(column=2, row=1)
 
 def main():
     aw = AnimationWindow()
