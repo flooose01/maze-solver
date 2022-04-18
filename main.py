@@ -1,11 +1,9 @@
-from os import stat
 import tkinter as tk
-from turtle import st
 import numpy as np
 from PIL import Image, ImageTk
 from copy import deepcopy
 from maze import Maze, TYPES
-from constants import WALL, CELL, VISITED, STATE_TO_COLOR
+from constants import PATH, CELL, VISITED, STATE_TO_COLOR
 
 class AnimationScreen(tk.Canvas):
     def __init__(self, master, **kwargs):
@@ -75,33 +73,52 @@ class AnimationState():
 
         self.is_finish = False
         self.curr_pos = (1,1)
-        self.visited = [(1,1)]
         self.st = [(1,1)]
+        self.path = []
         self.end_pos = (self.height - 1, self.width - 2)
 
     def dfs(self):
-        pos = self.st.pop(len(self.st) - 1)
+        pos = self.st[len(self.st) - 1]
         curr_y = pos[0]
         curr_x = pos[1]
         self.curr_maze[curr_y][curr_x] = VISITED
 
         if pos == self.end_pos:
-            self.st.clear()
             self.is_finish = True
+            self.path.append(pos)
+            for path in self.path:
+                self.curr_maze[path[0]][path[1]] = PATH
 
         else:
-            # Find neighbors
-            if self.curr_maze[curr_y][curr_x - 1] == CELL:
-                self.st.append((curr_y, curr_x - 1))
+            if self.is_dead_end(pos):
+                self.st.pop()
+                while (self.is_dead_end(self.st[len(self.st) - 1])):
+                    self.st.pop()
+                    self.path.pop()
+            else:
+                self.path.append(pos)
+                # Find neighbors
+                if self.curr_maze[curr_y][curr_x - 1] == CELL:
+                    self.st.append((curr_y, curr_x - 1))
 
-            if self.curr_maze[curr_y + 1][curr_x] == CELL:
-                self.st.append((curr_y + 1, curr_x))
+                if self.curr_maze[curr_y + 1][curr_x] == CELL:
+                    self.st.append((curr_y + 1, curr_x))
 
-            if self.curr_maze[curr_y][curr_x + 1] == CELL:
-                self.st.append((curr_y, curr_x + 1))
+                if self.curr_maze[curr_y][curr_x + 1] == CELL:
+                    self.st.append((curr_y, curr_x + 1))
 
-            if self.curr_maze[curr_y - 1][curr_x] == CELL:
-                self.st.append((curr_y - 1, curr_x))
+                if self.curr_maze[curr_y - 1][curr_x] == CELL:
+                    self.st.append((curr_y - 1, curr_x))
+
+    def is_dead_end(self, pos):
+        curr_y = pos[0]
+        curr_x = pos[1]
+
+        if (pos != self.end_pos):
+            return (self.curr_maze[curr_y][curr_x - 1] != CELL and self.curr_maze[curr_y + 1][curr_x] != CELL
+                and self.curr_maze[curr_y][curr_x + 1] != CELL and self.curr_maze[curr_y - 1][curr_x] != CELL)
+        else:
+            return False
 
     def reset(self):
         self.is_finish = False
