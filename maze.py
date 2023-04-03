@@ -176,6 +176,7 @@ class Eller:
 class DFS:
     def __init__(self):
         self.test = 0
+        self.foo = "foo"
 
 class Prim:
     def __init__(self):
