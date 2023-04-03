@@ -114,7 +114,7 @@ class AnimationState():
         curr_y = pos[0]
         curr_x = pos[1]
 
-        if (pos != self.end_pos):
+        if pos != self.end_pos:
             return (self.curr_maze[curr_y][curr_x - 1] != CELL and self.curr_maze[curr_y + 1][curr_x] != CELL
                 and self.curr_maze[curr_y][curr_x + 1] != CELL and self.curr_maze[curr_y - 1][curr_x] != CELL)
         else:

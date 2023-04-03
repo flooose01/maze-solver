@@ -180,6 +180,7 @@ class DFS:
 class Prim:
     def __init__(self):
         self.test = 0
+        self.foo = "bar"
 
 class Kruskal:
     def __init__(self):
